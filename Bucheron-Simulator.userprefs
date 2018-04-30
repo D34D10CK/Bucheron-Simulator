@@ -1,0 +1,12 @@
+﻿<Properties StartupItem="Bucheron-Simulator.csproj">
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\ProceduralMeshes\proceduralTree.cs">
+    <Files>
+      <File FileName="Assets\ProceduralMeshes\proceduralTree.cs" Line="22" Column="19" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+</Properties>
