@@ -1,4 +1,0 @@
-sceneSetups:
-- path: Assets/treegen.unity
-  isLoaded: 1
-  isActive: 1
