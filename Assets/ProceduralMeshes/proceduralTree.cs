@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(MeshFilter))]
-public class proceduralTree : MonoBehaviour {
+public class ProceduralTree : MonoBehaviour {
 
 	Mesh mesh;
     Material material;
@@ -14,7 +14,6 @@ public class proceduralTree : MonoBehaviour {
     int nbVertices;
 	int[] triangles;
     int nbTriangles;
-
 
     void Awake ()
 	{
@@ -105,59 +104,96 @@ public class proceduralTree : MonoBehaviour {
      * beta influences tendencies to goes upward
      * v = v coordinate of uv
     */
-    int GenTree (int baseOffet, float r, float l, float alpha, float beta, Vector3 n, Vector3 pos, int vert, float v)
+    int GenTree (int baseOffet, float r, float l, float alpha, float beta, float gamma, Vector3 n, Vector3 pos, int nb_vert, float v)
     {
         float rnd = Random.Range(0.0f, 1.0f);
 
-        if (r < 0.2f)
+        if (r < 0.02f)
         {
-            return baseOffet + vert;
+            return baseOffet + nb_vert;
         }
-        else if (rnd < 0.25f)
+        else if (rnd < gamma)
         {
             Vector3 n1 = GenNormal(n, alpha, beta);
             Vector3 n2 = GenNormal(n, alpha, beta);
 
             //To be sure that they don't go both to the same direction
-            while (Vector3.Dot(n1, n2) > 0.92)
-            {
-                n2 = GenNormal(n, alpha, beta);
-            }
+            while (Vector3.Dot(n1, n2) > 0.92) { n2 = GenNormal(n, alpha, beta); }
 
             float d1 = l * Random.Range(0.8f, 1.2f);
             float d2 = l * Random.Range(0.8f, 1.2f);
             Vector3 pos1 = pos + n1 * d1;
             Vector3 pos2 = pos + n2 * d2;
 
+            l *= 1.1f;
             r *= 0.8f;
-            alpha *= 1.0f;
             beta *= 0.95f;
-  
+            gamma *= 0.9f;
 
-            nbVertices = GenCircle(vertices, uv, nbVertices, r, n1, pos1, vert, v);
-            nbTriangles = ConnectCircles(nbTriangles, baseOffet, baseOffet + vert, vert);
+            int offset = 0;
+            if (r < 0.2f)
+            {
+                //First Branch
+                nbVertices = GenCircle(vertices, uv, nbVertices, r, n1, pos1, nb_vert, v);
+                nbTriangles = ConnectCircles(nbTriangles, baseOffet, baseOffet + nb_vert, nb_vert);
+                offset = GenTree(baseOffet + nb_vert, r, l, alpha, beta, gamma, n1, pos1, nb_vert, v + d1 * 5.0f);
 
-            int offset = GenTree(baseOffet + vert, r, l, alpha, beta, n1, pos1, vert, v + d1 * 0.5f);
+                //Second Branch
+                nbVertices = GenCircle(vertices, uv, nbVertices, r, n2, pos2, nb_vert, v);
+                nbTriangles = ConnectCircles(nbTriangles, baseOffet, offset, nb_vert);
+                return GenTree(offset, r, l, alpha, beta, gamma, n2, pos2, nb_vert, v + d2 * 5f);
+            }
+            else
+            {
+                //First branch
+                Vector3 p = (pos1 - pos) / 10f;
+                for (int i = 0; i < 10; i++)
+                {
+                    nbVertices = GenCircle(vertices, uv, nbVertices, r, n1, pos + i * p, nb_vert, v + d1 * i*0.5f);
+                    nbTriangles = ConnectCircles(nbTriangles, baseOffet + nb_vert * i, baseOffet + nb_vert * (i+1), nb_vert);
+                }
+                offset = GenTree(baseOffet + 10 * nb_vert, r, l, alpha, beta, gamma, n1, pos1, nb_vert, v + d1 * 5f);
 
-            nbVertices = GenCircle(vertices, uv, nbVertices, r, n2, pos2, vert, v);
-            nbTriangles = ConnectCircles(nbTriangles, baseOffet, offset, vert);
+                //Second Branch
+                p = (pos2 - pos) / 10f;
 
-            return GenTree(offset, r, l, alpha, beta, n2, pos2, vert, v + d2 * 0.5f);
+                nbVertices = GenCircle(vertices, uv, nbVertices, r, n2, pos + p, nb_vert, v);
+                nbTriangles = ConnectCircles(nbTriangles, baseOffet, offset, nb_vert);
+
+                for (int i = 1; i < 10; i++)
+                {
+                    nbVertices = GenCircle(vertices, uv, nbVertices, r, n2, pos + i * p, nb_vert, v + d2 * i * 0.5f);
+                    nbTriangles = ConnectCircles(nbTriangles, offset + nb_vert * (i-1), offset + nb_vert * i, nb_vert);
+                }
+                return GenTree(offset + 9 * nb_vert, r, l, alpha, beta, gamma, n2, pos2, nb_vert, v + d2 * 5f);
+            }
+
         }
         else
         {
-            Vector3 n_new = GenNormal(n, alpha, beta);
-            float d = l * Random.Range(0.8f, 1.2f);
+            Vector3 n_new = GenNormal(n, 0.9f, beta);
+            float d = l * Random.Range(0.7f, 1.3f);
             Vector3 new_pos = pos + n_new * d;
 
-            r *= 0.9f;
-            alpha *= 1.0f;
+            l *= 0.9f;
+            r *= 0.80f;
             beta *= 0.8f;
- 
-            nbVertices = GenCircle(vertices, uv, nbVertices, r, n_new, new_pos, vert, v);
-            nbTriangles = ConnectCircles(nbTriangles, baseOffet, baseOffet + vert, vert);
+            gamma *= 1.6f;
 
-            return GenTree(baseOffet + vert, r, l, alpha, beta, n_new, new_pos, vert, v + d * 0.5f);
+            if (r < 0.2f)
+            {
+                nbVertices = GenCircle(vertices, uv, nbVertices, r, n_new, new_pos, nb_vert, v);
+                nbTriangles = ConnectCircles(nbTriangles, baseOffet, baseOffet + nb_vert, nb_vert);
+                return GenTree(baseOffet + nb_vert, r, l, alpha, beta, gamma, n_new, new_pos, nb_vert, v + d * 5f);
+            }
+
+            Vector3 p = (new_pos - pos) / 10f;
+            for (int i = 0; i < 10; i++)
+            {
+                nbVertices = GenCircle(vertices, uv, nbVertices, r, n_new, pos + i * p, nb_vert, v + d * i * 0.5f);
+                nbTriangles = ConnectCircles(nbTriangles, baseOffet + nb_vert * i, baseOffet + nb_vert * (i+1), nb_vert);
+            }
+            return GenTree(baseOffet + 10 * nb_vert, r, l, alpha, beta, gamma, n_new, new_pos, nb_vert, v + d * 5f);
         }
     }
 
@@ -165,13 +201,13 @@ public class proceduralTree : MonoBehaviour {
     {
         vertices = new Vector3[6000];
         uv = new Vector2[6000];
-        triangles = new int[21000];
+        triangles = new int[32000];
         
         nbVertices = 0;
         nbTriangles = 0;
 
-        nbVertices = GenCircle(vertices, uv, nbVertices, 3.0f, new Vector3(0, 1, 0), new Vector3(0, 0, 0), 8, 0.0f);
-        GenTree(0, 2.0f, 8f, 0.8f, 0.45f, new Vector3(0, 1, 0), new Vector3(0, 0, 0), 8, 4.0f);
+        nbVertices = GenCircle (vertices, uv, nbVertices, 0.35f, new Vector3(0, 1, 0), new Vector3(0, 0, 0), 8, 0.0f);
+        GenTree (0, 0.35f, 1.8f, 0.55f, 0.35f, 0.15f, new Vector3(0, 1, 0), new Vector3(0, 0, 0), 8, 4.0f);
     }
 
     void CreateMesh()
@@ -193,6 +229,40 @@ public class proceduralTree : MonoBehaviour {
         mesh.vertices = mesh_vertices;
         mesh.triangles = mesh_triangles;
         mesh.uv = mesh_uv;
+
+        vertices = mesh_vertices;
+        triangles = mesh_triangles;
+        uv = mesh_uv;
     }
-		
+
+
+    public void Deform(Vector3 impactPosition, Vector3 normal, float coeff)
+    {
+        int i = 0;
+
+        for (i = 0; i < nbVertices; i++)
+        {
+            float dist = (impactPosition - vertices[i]).magnitude;
+            if (dist > 1.0)
+                continue;
+            float d = 1.0f + dist;
+            vertices[i] += normal * coeff / Mathf.Exp(d*d*d*d*d*d);
+        }
+
+        mesh.vertices = vertices;
+
+
+    }
+
+    void OnCollisionEnter(Collision collision)
+    {
+        Mesh mesh = this.GetComponent<MeshFilter>().mesh;
+        Debug.Log(mesh.vertexCount);
+
+        foreach (ContactPoint contact in collision.contacts)
+        {
+            Debug.Log(contact.normal);
+            Debug.Log(contact.point - transform.position);
+        }
+    }
 }
