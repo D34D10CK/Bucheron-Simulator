@@ -6,23 +6,23 @@ using UnityEngine;
 public class ProceduralTree : MonoBehaviour {
 
 	Mesh mesh;
-    Material material;
-
     Random rnd;
 	Vector3[] vertices;
     Vector2[] uv;
     int nbVertices;
 	int[] triangles;
     int nbTriangles;
+    float deformation;
 
     void Awake ()
 	{
 		mesh = GetComponent<MeshFilter>().mesh;
-	}
+    }
 	// Use this for initialization
 	void Start () {
 		MakeMeshData ();
         CreateMesh();
+        deformation = 0;
     }
 
     int GenCircle (Vector3[] vertices, Vector2[] uv, int idx, float r, Vector3 n, Vector3 pos, int nbVert, float up)
@@ -156,7 +156,6 @@ public class ProceduralTree : MonoBehaviour {
 
                 //Second Branch
                 p = (pos2 - pos) / 10f;
-
                 nbVertices = GenCircle(vertices, uv, nbVertices, r, n2, pos + p, nb_vert, v);
                 nbTriangles = ConnectCircles(nbTriangles, baseOffet, offset, nb_vert);
 
@@ -235,22 +234,92 @@ public class ProceduralTree : MonoBehaviour {
         uv = mesh_uv;
     }
 
+    public CuttedTree Prefab;
 
     public void Deform(Vector3 impactPosition, Vector3 normal, float coeff)
     {
-        int i = 0;
+        float max = 0;
+        int max_i = 0;
 
-        for (i = 0; i < nbVertices; i++)
+        for (int i = 0; i < nbVertices; i++)
         {
             float dist = (impactPosition - vertices[i]).magnitude;
             if (dist > 1.0)
                 continue;
             float d = 1.0f + dist;
-            vertices[i] += normal * coeff / Mathf.Exp(d*d*d*d*d*d);
+            d = coeff / Mathf.Exp(d * d * d * d);
+            vertices[i] += normal * d;
+            if (d > max)
+            {
+                max = d;
+                max_i = i;
+            }
         }
 
+        deformation += max;
         mesh.vertices = vertices;
+        
+        if (deformation > 1)
+        {
+            while (max_i % 3 != 0) { max_i = max_i - 1; }
 
+            print("Instanciate Cutted Tree");
+            print(max_i);
+
+            Mesh downPart = new Mesh();
+            Mesh upPart = new Mesh();
+
+            List<Vector3> downVertices = new List<Vector3>();
+            List<Vector2> downUV = new List<Vector2>();
+            List<int> downTriangles = new List<int>();
+
+            int i = 0;
+            for (i = 0; i < max_i; i++)
+            {
+                downVertices.Add(vertices[i]);
+                downUV.Add(uv[i]);
+                vertices[i] = vertices[max_i];
+                uv[i] = uv[max_i];
+            }
+
+            i = 0;
+            while (triangles[i] < max_i)
+            {
+                downTriangles.Add(triangles[i]);
+                i++;
+            }
+            while (i % 3 != 0)
+            {
+                downTriangles.RemoveAt(downTriangles.Count - 1);
+                i--;
+            }
+
+            downPart.SetVertices(downVertices);
+            downPart.SetUVs(0, downUV);
+            downPart.SetTriangles(downTriangles, 0);
+
+            upPart.vertices = vertices;
+            upPart.uv = uv;
+            upPart.triangles = triangles;
+
+            CuttedTree tree;
+            tree = Instantiate(Prefab, transform.parent) as CuttedTree;
+            tree.SetMesh(upPart);
+            tree.GetComponent<Rigidbody>().velocity = new Vector3(1, 0, 0);
+            tree.GetComponent<Rigidbody>().ResetCenterOfMass();
+
+            CuttedTree treeDown;
+            treeDown = Instantiate(Prefab, transform.parent) as CuttedTree;
+            treeDown.SetMesh(downPart);
+            treeDown.GetComponent<CapsuleCollider>().height = 2;
+            treeDown.GetComponent<CapsuleCollider>().transform.position = treeDown.transform.position;
+            treeDown.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezePosition | RigidbodyConstraints.FreezeRotation;
+
+            Destroy(mesh);
+            Destroy(GetComponent<Rigidbody>());
+            Destroy(GetComponent<CapsuleCollider>());
+
+        }
 
     }
 

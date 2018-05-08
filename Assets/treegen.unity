@@ -406,6 +406,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 67ac8ec040343994bb3934d053a0a8ef, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  Prefab: {fileID: 114000827960996396, guid: 50b9f92a57daa9c4c967bc3064461f83, type: 2}
 --- !u!23 &864853913
 MeshRenderer:
   m_ObjectHideFlags: 0
